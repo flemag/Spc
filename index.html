@@ -2064,7 +2064,10 @@
                     if (fieldPath.startsWith('shiftColors')) {
                         // On prend la couleur HEX de l'input et on y applique une opacité basse
                         value = hexToRgba(input.value, 0.05);
-                    } else if (fieldPath === 'customColors.line' || fieldPath === 'customColors.toleranceZone') {
+                    } else if (fieldPath === 'customColors.toleranceZone') {
+                        // On prend la couleur HEX de l'input et on y applique une opacité basse
+                        value = hexToRgba(input.value, 0.1); // 10% d'opacité
+                    } else if (fieldPath === 'customColors.line') {
                         // Pour les autres couleurs transparentes, on pourrait aussi forcer une opacité
                         // Mais on fait confiance à l'input de l'utilisateur pour le moment, sauf pour le shift
                         value = input.value;
