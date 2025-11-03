@@ -10,9 +10,8 @@
     
     <!-- Chart.js and Plugins (fichiers locaux) -->
     <script src="./js/chart.js"></script>
-    <script src="./js/chartjs-plugin-annotation.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <script src="./js/chartjs-plugin-zoom.min.js"></script>
+    <script src="./js/chartjs-plugin-annotation.min.js"></script>
     
     <style>
         /* CSS du Fichier Précédent + Correctifs */
@@ -1124,7 +1123,7 @@
                                             </button>
                                             <button type="submit" class="btn btn-primary">
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 5px;">
-                                                    <polyline points="20,6 9,17 4,20"></polyline>
+                                                    <polyline points="20 6 9 17 4"></polyline>
                                                     <path d="M20 6l-3 3a2 2 0 0 1-2.83 0l-6-6a2 2 0 0 1 0-2.83l6-6a2 2 0 0 1 2.83 0l3 3"></path>
                                                 </svg>
                                                 Valider
@@ -1660,6 +1659,13 @@
                                 </div>
                             </div>
                             
+                            <!-- Data Point Details (initially hidden) -->
+                            <div class="data-point-details hidden" id="dataPointDetails">
+                                <h5><i class="bi bi-info-circle"></i> Détails du point de données</h5>
+                                <div id="dataPointDetailsContent">
+                                    <!-- Details will be populated by JavaScript -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1669,28 +1675,24 @@
 
     <!-- NOUVEAU: Modal pour les détails du point de données -->
     <div class="modal fade" id="dataPointDetailsModal" tabindex="-1" aria-labelledby="dataPointDetailsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="dataPointDetailsModalLabel">
-                        <i class="bi bi-info-circle"></i> Détails du Point de Données
-                    </h5>
+                    <h5 class="modal-title" id="dataPointDetailsModalLabel">Détails du Point de Données</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body" id="dataPointDetailsModalContent">
+                <div class="modal-body" id="dataPointDetailsModalBody">
                     <!-- Le contenu sera injecté par JavaScript -->
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                    <button type="button" class="btn btn-primary" id="editDataPointFromModalBtn">
-                        <i class="bi bi-pencil"></i> Modifier cette entrée
-                    </button>
+                    <button type="button" class="btn btn-primary" id="modalEditDataPointBtn">Modifier cette entrée</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Fonction utilitaire pour convertir un HEX en RGBA avec une opacité donnée
         function hexToRgba(hex, alpha) {
@@ -1701,7 +1703,6 @@
             return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         }
 
-        Chart.register(window['chartjs-plugin-annotation'], window['chartjs-plugin-zoom']);
         // Global variables
         let spcData = [];
         let currentPeriod = new Date();
@@ -2082,10 +2083,7 @@
                     if (fieldPath.startsWith('shiftColors')) {
                         // On prend la couleur HEX de l'input et on y applique une opacité basse
                         value = hexToRgba(input.value, 0.05);
-                    } else if (fieldPath === 'customColors.toleranceZone') {
-                        // On prend la couleur HEX de l'input et on y applique une opacité basse
-                        value = hexToRgba(input.value, 0.1); // 10% d'opacité
-                    } else if (fieldPath === 'customColors.line') {
+                    } else if (fieldPath === 'customColors.line' || fieldPath === 'customColors.toleranceZone') {
                         // Pour les autres couleurs transparentes, on pourrait aussi forcer une opacité
                         // Mais on fait confiance à l'input de l'utilisateur pour le moment, sauf pour le shift
                         value = input.value;
@@ -2392,81 +2390,75 @@
 
         // Show data point details in a modal
         function showDataPointDetails(data) {
-            const modalContent = document.getElementById('dataPointDetailsModalContent');
-            const modal = new bootstrap.Modal(document.getElementById('dataPointDetailsModal'));
+            const modalBody = document.getElementById('dataPointDetailsModalBody');
+            const modalTitle = document.getElementById('dataPointDetailsModalLabel');
 
             // Get all data for this entry
             const spcDataEntry = data.entry[`spc${data.spc}`];
             
-            // Populate modal content
-            modalContent.innerHTML = `
+            // Set modal title
+            modalTitle.textContent = `Détails du Point: ${data.date} - ${data.poste} - SPC${data.spc}`;
+
+            // Populate modal body
+            modalBody.innerHTML = `
                 <div class="container-fluid">
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="detail-row"><div class="detail-label">Date:</div><div class="detail-value">${data.date}</div></div>
-                            <div class="detail-row"><div class="detail-label">Poste:</div><div class="detail-value">${data.poste}</div></div>
-                            <div class="detail-row"><div class="detail-label">Équipe:</div><div class="detail-value">${data.equipe}</div></div>
-                            <div class="detail-row"><div class="detail-label">SPC:</div><div class="detail-value">${data.spc}</div></div>
+                            <h5>Identification</h5>
+                            <p><strong>Date:</strong> ${data.date}</p>
+                            <p><strong>Poste:</strong> ${data.poste}</p>
+                            <p><strong>Équipe:</strong> ${data.equipe}</p>
+                            <p><strong>SPC:</strong> ${data.spc}</p>
+                            <p><strong>N° Tôle 1:</strong> ${spcDataEntry.tole1 || 'N/A'}</p>
+                            <p><strong>N° Tôle 2:</strong> ${spcDataEntry.tole2 || 'N/A'}</p>
+                            <p><strong>N° Tôle 3:</strong> ${spcDataEntry.tole3 || 'N/A'}</p>
                         </div>
                         <div class="col-md-6">
-                            <div class="detail-row"><div class="detail-label">N° Tôle 1:</div><div class="detail-value">${spcDataEntry.tole1 || 'N/A'}</div></div>
-                            <div class="detail-row"><div class="detail-label">N° Tôle 2:</div><div class="detail-value">${spcDataEntry.tole2 || 'N/A'}</div></div>
-                            <div class="detail-row"><div class="detail-label">N° Tôle 3:</div><div class="detail-value">${spcDataEntry.tole3 || 'N/A'}</div></div>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Métriques Lm-Lv</h6>
-                            <div class="detail-row"><div class="detail-label">Moyenne:</div><div class="detail-value">${spcDataEntry.moyLmLv || 'N/A'}</div></div>
-                            <div class="detail-row"><div class="detail-label">Étendue:</div><div class="detail-value">${spcDataEntry.etdLmLv || 'N/A'}</div></div>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Métriques Ld-Lr</h6>
-                            <div class="detail-row"><div class="detail-label">Moyenne:</div><div class="detail-value">${spcDataEntry.moyLdLr || 'N/A'}</div></div>
-                            <div class="detail-row"><div class="detail-label">Étendue:</div><div class="detail-value">${spcDataEntry.etdLdLr || 'N/A'}</div></div>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <h6>Métriques Largeur</h6>
-                            <div class="detail-row"><div class="detail-label">Moyenne:</div><div class="detail-value">${spcDataEntry.moyLargeur || 'N/A'}</div></div>
-                            <div class="detail-row"><div class="detail-label">Étendue:</div><div class="detail-value">${spcDataEntry.etdLargeur || 'N/A'}</div></div>
+                            <h5>Métriques Principales</h5>
+                            <p><strong>Moy(Lm-Lv):</strong> ${spcDataEntry.moyLmLv || 'N/A'}</p>
+                            <p><strong>Etd(Lm-Lv):</strong> ${spcDataEntry.etdLmLv || 'N/A'}</p>
+                            <p><strong>Moy(Ld-Lr):</strong> ${spcDataEntry.moyLdLr || 'N/A'}</p>
+                            <p><strong>Etd(Ld-Lr):</strong> ${spcDataEntry.etdLdLr || 'N/A'}</p>
+                            <p><strong>Moy(Largeur):</strong> ${spcDataEntry.moyLargeur || 'N/A'}</p>
+                            <p><strong>Etd(Largeur):</strong> ${spcDataEntry.etdLargeur || 'N/A'}</p>
                         </div>
                     </div>
                     <hr>
                     <div class="row">
                         <div class="col-md-6">
-                            <h6>HQT</h6>
-                            <div class="detail-row"><div class="detail-label">HQT 1:</div><div class="detail-value">${spcDataEntry.hqt1 || 'N/A'}</div></div>
-                            <div class="detail-row"><div class="detail-label">HQT 2:</div><div class="detail-value">${spcDataEntry.hqt2 || 'N/A'}</div></div>
-                            <div class="detail-row"><div class="detail-label">HQT 3:</div><div class="detail-value">${spcDataEntry.hqt3 || 'N/A'}</div></div>
+                            <h5>Métriques HQT</h5>
+                            <p><strong>HQT 1:</strong> ${spcDataEntry.hqt1 || 'N/A'}</p>
+                            <p><strong>HQT 2:</strong> ${spcDataEntry.hqt2 || 'N/A'}</p>
+                            <p><strong>HQT 3:</strong> ${spcDataEntry.hqt3 || 'N/A'}</p>
                         </div>
                         <div class="col-md-6">
-                            <h6>HQP</h6>
-                            <div class="detail-row"><div class="detail-label">HQP 1:</div><div class="detail-value">${spcDataEntry.hqp1 || 'N/A'}</div></div>
-                            <div class="detail-row"><div class="detail-label">HQP 2:</div><div class="detail-value">${spcDataEntry.hqp2 || 'N/A'}</div></div>
-                            <div class="detail-row"><div class="detail-label">HQP 3:</div><div class="detail-value">${spcDataEntry.hqp3 || 'N/A'}</div></div>
+                            <h5>Métriques HQP</h5>
+                            <p><strong>HQP 1:</strong> ${spcDataEntry.hqp1 || 'N/A'}</p>
+                            <p><strong>HQP 2:</strong> ${spcDataEntry.hqp2 || 'N/A'}</p>
+                            <p><strong>HQP 3:</strong> ${spcDataEntry.hqp3 || 'N/A'}</p>
                         </div>
                     </div>
                 </div>
             `;
             
-            // Handle the edit button click from the modal
-            const editBtn = document.getElementById('editDataPointFromModalBtn');
-            const editBtnClone = editBtn.cloneNode(true); // Clone to remove old listeners
-            editBtn.parentNode.replaceChild(editBtnClone, editBtn);
+            // Show the modal
+            const dataPointModal = new bootstrap.Modal(document.getElementById('dataPointDetailsModal'));
+            dataPointModal.show();
+
+            // Add event listener for edit button in modal
+            const modalEditButton = document.getElementById('modalEditDataPointBtn');
             
-            editBtnClone.addEventListener('click', function() {
-                modal.hide();
+            // Clone and replace to remove old listeners
+            const newEditButton = modalEditButton.cloneNode(true);
+            modalEditButton.parentNode.replaceChild(newEditButton, modalEditButton);
+
+            newEditButton.addEventListener('click', function() {
                 loadEntryToForm(data.entry);
+                dataPointModal.hide(); // Hide the modal before navigating
                 showPage('saisie');
                 document.querySelector('[data-page="saisie"]').classList.add('active');
                 document.querySelector('[data-page="graphiques"]').classList.remove('active');
             });
-
-            // Show the modal
-            modal.show();
         }
 
         // Zoom chart
@@ -3822,14 +3814,17 @@
                         axis: 'x' 
                     },
                     onHover: (event, elements) => {
+                        console.log("onHover event triggered");
                         if (currentViewMode === 'classic') {
                             // Assurez-vous que le dataset est bien celui des points (le premier)
                             const pointElement = elements.find(el => el.datasetIndex === 0);
                             if (pointElement) {
+                                console.log("Data point found on hover");
                                 const index = pointElement.index;
                                 const dataPoint = dataset.dataPoints[index];
                                 updateInteractiveLegend(dataPoint); // Mise à jour de la légende
                             } else {
+                                console.log("No data point found on hover");
                                 updateInteractiveLegend(null);
                             }
                         }
@@ -3954,10 +3949,22 @@
                         <p class="mb-0"><strong>Valeur:</strong> <span class="${valueColor}">${dataPoint.value.toFixed(2)}</span></p>
                         <p class="mb-0"><strong>Statut:</strong> <span class="${isOutOfTolerance ? 'text-danger fw-bold' : 'text-success fw-bold'}">${isOutOfTolerance ? 'Hors Tolérance' : 'Conforme'}</span></p>
                     </div>
-                    <p class="mb-0 mt-2"><button class="btn btn-sm btn-outline-primary" onclick="showDataPointDetails(dataPoint)"><i class="bi bi-info-circle"></i> Détails complets</button></p>
+                    <p class="mb-0 mt-2"><button class="btn btn-sm btn-outline-primary" id="legendDetailsButton"><i class="bi bi-info-circle"></i> Détails complets</button></p>
                 `;
                 detailsContainer.classList.add('active');
                 detailsContainer.innerHTML = detailsHtml;
+
+                document.getElementById('legendDetailsButton').addEventListener('click', () => {
+                    if (dataPoint.equipe) {
+                        showDataPointDetails(dataPoint);
+                    } else {
+                        // Handle average data point
+                        showDataPointDetails({
+                            ...dataPoint.entries[0],
+                            value: dataPoint.value
+                        });
+                    }
+                });
             } else {
                 detailsContainer.classList.remove('active');
                 detailsContainer.innerHTML = '<p class="mb-0 text-secondary"><i class="bi bi-info-circle"></i> Survolez un point pour afficher ses détails.</p>';
@@ -3982,7 +3989,7 @@
                     type: 'box',
                     yMin: usl,
                     yMax: 99999, // Au-dessus de l'USL
-                    backgroundColor: colors.toleranceZone,
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
                     borderWidth: 0,
                     z: -1
                 };
@@ -4010,7 +4017,7 @@
                     type: 'box',
                     yMin: -99999, // En dessous de la LSL
                     yMax: lsl,
-                    backgroundColor: colors.toleranceZone,
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
                     borderWidth: 0,
                     z: -1
                 };
@@ -4236,5 +4243,7 @@
             });
         }
     </script>
+    <!-- Bootstrap JS (fichier local) -->
+    <script src="./js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
